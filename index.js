@@ -263,8 +263,8 @@ const prizes = {
     ],
     super: [
         { prize: '200k', chance: 50 },
-        { prize: '5روب', chance: 30 },
-        { prize: '10روب', chance: 7 },
+        { prize: '5rob', chance: 30 },
+        { prize: '10rob', chance: 7 },
         { prize: '1m', chance: 1 },
         { prize: '1m', chance: 0.000000001 },
         { prize: '10m', chance: 0.01 },
