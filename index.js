@@ -6,8 +6,8 @@ const fs = require('fs');
 const POINTS_FILE = './points.json';
 const SEEN_FILE = './seen.json'; // يحفظ كل الأعضاء اللي سبق ودخلوا السيرفر (حتى لو نقاطهم صفر) عشان نمنع تكرار النقطة لو طلعوا ودخلوا
 
-// أقل عمر مسموح للحساب حتى يُحسب لصاحب الدعوة (أسبوعين ونص = 17.5 يوم)
-const MIN_ACCOUNT_AGE_MS = 17.5 * 24 * 60 * 60 * 1000;
+// أقل عمر مسموح للحساب حتى يُحسب لصاحب الدعوة (3 أسابيع = 21 يوم)
+const MIN_ACCOUNT_AGE_MS = 21 * 24 * 60 * 60 * 1000;
 
 function loadJSON(path) {
     if (fs.existsSync(path)) {
@@ -116,7 +116,7 @@ client.on('guildMemberAdd', async member => {
             // 2) هل عمر حساب العضو أقل من أسبوعين ونص؟ (حساب وهمي/جديد) => ما يُحسب
             const accountAge = Date.now() - member.user.createdTimestamp;
             if (accountAge < MIN_ACCOUNT_AGE_MS) {
-                if (channel) channel.send(`⚠️ <@${inviter.id}> حساب العضو <@${member.id}> عمره أقل من أسبوعين ونص (حساب جديد/مشتبه به)، لن تحصل على نقاط.`);
+                if (channel) channel.send(`⚠️ <@${inviter.id}> حساب العضو <@${member.id}> عمره أقل من 3 أسابيع (حساب جديد/مشتبه به)، لن تحصل على نقاط.`);
             } else {
                 // عضو جديد فعلاً وحسابه قديم بما فيه الكفاية => يُحسب
                 const currentPoints = userPoints.get(inviter.id) || 0;
@@ -257,9 +257,9 @@ const prizes = {
     ],
     super: [
         { prize: '200k', chance: 50 },
-        { prize: '300k', chance: 30 },
-        { prize: '400k', chance: 7 },
-        { prize: '10m', chance: 0.000000001 },
+        { prize: '5rob', chance: 30 },
+        { prize: '1orob', chance: 7 },
+        { prize: '1m', chance: 1 },
         { prize: '1m', chance: 0.000000001 },
         { prize: '10m', chance: 0.01 },
         { prize: '8m', chance: 0.00001 },
