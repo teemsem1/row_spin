@@ -44,6 +44,25 @@ client.once('ready', async () => {
     });
     console.log('تم حفظ الدعوات الحالية.');
 
+    // نجيب كل الأعضاء الموجودين حالياً بالسيرفر ونسجلهم كـ "شفناهم من قبل"
+    // عشان أي عضو موجود أصلاً (حتى لو طلع ودخل بدعوة جديدة بعدين) ما يُحسب له نقطة
+    // النقاط بتنحسب فقط لعضو جديد كلياً ما كان بالسيرفر أبداً
+    try {
+        const allMembers = await guild.members.fetch();
+        let addedCount = 0;
+        allMembers.forEach(m => {
+            if (m.user.bot) return;
+            if (!seenMembers.has(m.id)) {
+                seenMembers.set(m.id, true);
+                addedCount++;
+            }
+        });
+        if (addedCount > 0) saveSeen(seenMembers);
+        console.log(`تم فحص الأعضاء الحاليين وتسجيل ${addedCount} عضو جديد في قائمة "شفناهم من قبل" (المجموع: ${seenMembers.size}).`);
+    } catch (err) {
+        console.error('خطأ أثناء جلب الأعضاء الحاليين:', err);
+    }
+
     const commands = [
         new SlashCommandBuilder()
             .setName('reset-points')
@@ -106,14 +125,24 @@ client.on('guildMemberAdd', async member => {
         return invite.uses > oldUses;
     });
 
+    // 0) هل العضو سبق ودخل السيرفر من قبل (بأي طريقة، حتى لو ما قدرنا نتتبع دعوته)؟
+    //    نتأكد من هذا *قبل* أي شي، عشان أي عضو "طالع داخل" ما يُحسب له نقطة أبداً
+    const alreadySeen = seenMembers.has(member.id);
+
+    // نسجل العضو كـ "شوفناه" فوراً عند كل دخول، بغض النظر هل لقينا الدعوة أو احتسبنا نقطة أو لا
+    if (!alreadySeen) {
+        seenMembers.set(member.id, true);
+        saveSeen(seenMembers);
+    }
+
     if (usedInvite && usedInvite.inviter) {
         const inviter = usedInvite.inviter;
 
         // 1) هل العضو سبق ودخل السيرفر من قبل؟ (طالع داخل / عضو قديم) => ما يُحسب
-        if (seenMembers.has(member.id)) {
+        if (alreadySeen) {
             if (channel) channel.send(`⚠️ <@${inviter.id}> هذا العضو <@${member.id}> سبق دخل السيرفر من قبل، لن تحصل على نقاط.`);
         } else {
-            // 2) هل عمر حساب العضو أقل من أسبوعين ونص؟ (حساب وهمي/جديد) => ما يُحسب
+            // 2) هل عمر حساب العضو أقل من 3 أسابيع؟ (حساب وهمي/جديد) => ما يُحسب
             const accountAge = Date.now() - member.user.createdTimestamp;
             if (accountAge < MIN_ACCOUNT_AGE_MS) {
                 if (channel) channel.send(`⚠️ <@${inviter.id}> حساب العضو <@${member.id}> عمره أقل من 3 أسابيع (حساب جديد/مشتبه به)، لن تحصل على نقاط.`);
@@ -124,9 +153,6 @@ client.on('guildMemberAdd', async member => {
                 savePoints(userPoints);
                 if (channel) channel.send(`✅ <@${inviter.id}> دعوت <@${member.id}> إلى السيرفر! نقاطك الآن: ${currentPoints + 1} 🔥`);
             }
-            // نسجل العضو كـ "شوفناه" حتى لو ما احتسبنا له نقطة، عشان لو طلع ودخل مرة ثانية ما يُحسب أبداً
-            seenMembers.set(member.id, true);
-            saveSeen(seenMembers);
         }
     }
 
